@@ -132,9 +132,11 @@ function checkDeviceConnected() {
 function deployToDevice(appPath, target) {
     // Deploying to device...
     if (target) {
-        return spawn('ios-deploy', ['--justlaunch', '-d', '-b', appPath, '-i', target]);
+        //return spawn('ios-deploy', ['--justlaunch', '-d', '-b', appPath, '-i', target]);
+        return spawn('ios-deploy', ['--justlaunch', '-b', appPath, '-i', target]);
     } else {
-        return spawn('ios-deploy', ['--justlaunch', '-d', '-b', appPath]);
+        //return spawn('ios-deploy', ['--justlaunch', '-d', '-b', appPath]);
+        return spawn('ios-deploy', ['--justlaunch', '-b', appPath]);
     }
 }
 
