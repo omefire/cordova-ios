@@ -817,7 +817,7 @@ module.exports = channel;
 
 });
 
-// file: /Users/ednamorales/dev/apache_plugins/cordova-ios/cordova-js-src/exec.js
+// file: /Users/omefire/Projects/cordova-ios/cordova-js-src/exec.js
 define("cordova/exec", function(require, exports, module) {
 
 /*global require, module, atob, document */
@@ -884,6 +884,58 @@ function convertMessageToArgsNativeToJs(message) {
 }
 
 function iOSExec() {
+    var execArguments = arguments;
+    return new Promise(function(resolve, reject) {
+        var service, action, actionArgs;
+        var callbackId = null;
+        if (typeof execArguments[0] !== 'string') {
+            // FORMAT ONE
+            service = execArguments[2];
+            action = execArguments[3];
+            actionArgs = execArguments[4];
+
+            // Since we need to maintain backwards compatibility, we have to pass
+            // an invalid callbackId even if no callback was provided since plugins
+            // will be expecting it. The Cordova.exec() implementation allocates
+            // an invalid callbackId and passes it even if no callbacks were given.
+            callbackId = 'INVALID';
+        } else {
+            throw new Error('The old format of this exec call has been removed (deprecated since 2.1). Change to: ' +
+                'cordova.exec(null, null, \'Service\', \'action\', [ arg1, arg2 ]);'
+            );
+        }
+
+        // If actionArgs is not provided, default to an empty array
+        actionArgs = actionArgs || [];
+
+        // Register the callbacks and add the callbackId to the positional
+        // arguments if given.
+        callbackId = service + cordova.callbackId++;
+        cordova.callbacks[callbackId] = {
+            success: resolve, 
+            fail: reject
+        };
+
+        actionArgs = massageArgsJsToNative(actionArgs);
+
+        var command = [callbackId, service, action, actionArgs];
+
+        // Stringify and queue the command. We stringify to command now to
+        // effectively clone the command arguments in case they are mutated before
+        // the command is executed.
+        commandQueue.push(JSON.stringify(command));
+
+        // If we're in the context of a stringByEvaluatingJavaScriptFromString call,
+        // then the queue will be flushed when it returns; no need for a poke.
+        // Also, if there is already a command in the queue, then we've already
+        // poked the native side, so there is no reason to do so again.
+        if (!isInContextOfEvalJs && commandQueue.length == 1) {
+            pokeNative();
+        }
+    });
+}
+
+/*function iOSExec() {
 
     var successCallback, failCallback, service, action, actionArgs;
     var callbackId = null;
@@ -933,7 +985,7 @@ function iOSExec() {
     if (!isInContextOfEvalJs && commandQueue.length == 1) {
         pokeNative();
     }
-}
+}*/
 
 // CB-10530
 function proxyChanged() {
@@ -1045,7 +1097,8 @@ function cordovaExec() {
 }
 
 function execProxy() {
-    cordovaExec().apply(null, arguments);
+    // ToDO: Handle case when cexec is called instead of iOSExec
+    return cordovaExec().apply(null, arguments);
 };
 
 execProxy.nativeFetchMessages = function() {
@@ -1545,7 +1598,7 @@ exports.reset();
 
 });
 
-// file: /Users/ednamorales/dev/apache_plugins/cordova-ios/cordova-js-src/platform.js
+// file: /Users/omefire/Projects/cordova-ios/cordova-js-src/platform.js
 define("cordova/platform", function(require, exports, module) {
 
 module.exports = {
